@@ -1,0 +1,58 @@
+---
+- name: Setup Integração Oracle
+  hosts: localhost
+
+  tasks:
+  - name: Criar usuário
+    opitzconsulting.ansible_oracle.oracle_user:
+      hostname: "{{ host }}"
+      mode: sysdba
+      password: "{{ senha }}"
+      port: "{{ porta }}"
+      schema: "{{ novo_usuario }}"
+      schema_password: "{{ senha_novo_usuario }}"
+      service_name: "{{ service_name }}"
+      user: "{{ usuario }}"
+   
+  - name: Liberar grants SYS
+    opitzconsulting.ansible_oracle.oracle_grants:
+      grants: 
+        - connect
+        - resource
+        - 'unlimited tablespace'
+      grants_mode: append
+      hostname: "{{ host }}"
+      mode: sysdba
+      password: "{{ senha }}"
+      port: "{{ porta }}"
+      schema: "{{ novo_usuario }}"
+      service_name: "{{ service_name }}"
+      user: "{{ usuario }}"
+    
+  - name: Criar objetos do Sqitch
+    opitzconsulting.ansible_oracle.oracle_sql:
+      hostname: "{{ host }}"
+      password: "{{ senha_novo_usuario }}"
+      port: "{{ porta }}"
+      script: objetos_sqitch.sql
+      service_name: "{{ service_name }}"
+      username: "{{ novo_usuario }}"
+      
+  - name: Liberar grants dos objetos do Sqitch para o Tasy
+    opitzconsulting.ansible_oracle.oracle_grants:
+      grants_mode: append
+      hostname: "{{ host }}"
+      mode: sysdba
+      object_privs:
+        - insert,select,delete:{{ novo_usuario }}.changes
+        - insert,select,delete:{{ novo_usuario }}.dependencies
+        - insert,select,delete:{{ novo_usuario }}.events
+        - insert,select,delete:{{ novo_usuario }}.projects
+        - insert,select,delete:{{ novo_usuario }}.releases
+        - insert,select,delete:{{ novo_usuario }}.tags
+        - execute:{{ novo_usuario }}.sqitch_array
+      password: "{{ senha }}"
+      port: "{{ porta }}"
+      schema: tasy
+      service_name: "{{ service_name }}"
+      user: "{{ usuario }}"
